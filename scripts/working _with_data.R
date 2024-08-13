@@ -1,4 +1,6 @@
 library(tidyverse)
+library(lubridate)
+library(ggplot2)
 
 #read the csv data in source object. Our working directory is the the top folder.
 surveys <- read_csv("data/cleaned/surveys_complete_77_89.csv")
@@ -66,3 +68,90 @@ surveys_subset_3 <- surveys %>%
   filter(year == 1988) %>% 
   select(record_id, month, species_id)
 surveys_subset_3
+
+#mutate to create new columns.
+surveys %>% 
+  mutate(weight_kg = weight/1000, weight_lbs = weight_kg * 2.2) %>% 
+  filter( !is.na(weight))
+
+#combining multiple columns
+surveys %>% 
+  mutate(date = paste(day,month, year, sep = "-"))
+
+#change column position
+surveys %>% 
+  mutate(date = paste(day, month, year, sep = "-")) %>% 
+  relocate(date, .after = year)
+
+#to convert date from char to date numeric type using 1. function from lubridate packgae
+surveys %>% 
+  mutate(date = paste(day, month, year, sep = "-"),
+         date = dmy(date)) %>% 
+  relocate(date, .after = year)
+#to convert date from char to date numeric type using as.Date() needs YYYY-MM-DD format
+surveys %>% 
+  mutate(date = paste(year, month, day, sep = "-"),
+         date = as.Date(date)) %>% 
+  relocate(date, .after = year)
+
+#using %>%  inside other function
+surveys %>% 
+  mutate(date = paste(day, month, year, sep = "-") %>% dmy()) %>% 
+  relocate(date, .after = year)
+
+#challenge 4 : Because the ggplot() function takes the data as its first argument, you can actually pipe data straight into ggplot(). Try building a pipeline that creates the date column and plots weight across date.
+surveys %>% 
+  mutate(date = paste(day, month, year, sep = "-") %>% dmy()) %>% 
+  relocate(date, .after = year) %>% 
+  ggplot(mapping = aes(x = date, y = weight)) + geom_point(aes(alpha = 0.1)) + theme(legend.position = "none") 
+
+
+#split apply and combine approach
+#dplyr package functions : groupby and summarize.
+
+surveys %>% 
+  group_by(sex) %>% 
+  summarize(mean_weight = mean(weight, na.rm = T))
+
+#summarizing more than one variable
+surveys %>% 
+  group_by(sex) %>% 
+  summarize(mean_weight = mean(weight, na.rm = T), n = n())
+
+#grouping based on multiple variables is also possible
+surveys %>% 
+  group_by(species_id, sex) %>% 
+  summarize(mean_weight = mean(weight, na.rm = T), n = n())
+
+#filtering NA weights
+mean_weight_summary <- surveys %>% 
+  filter(!is.na(weight)) %>% 
+  group_by(species_id, sex) %>% 
+  summarize(mean_weight = mean(weight, na.rm = T), n = n())
+
+mean_weight_summary %>%  
+  arrange(mean_weight) #order the output in ascending mean_weight 
+
+mean_weight_summary %>%  
+  arrange(desc(mean_weight)) #order the output in descending mean_weight
+
+#remove groups at the end if not needed for future operations (Note: Read more on this.)
+mean_weight_summary %>% 
+  ungroup()
+
+#Use mutate to create a new column that is the function of one or more summarized group variable (e.g. mean)
+surveys %>% 
+  filter(!is.na(weight)) %>% 
+  group_by(species_id, sex) %>% 
+  mutate(mean_weight = mean(weight, na.rm = T),
+         weight_diff = weight - mean_weight)
+
+#challenge 5 : Use the split-apply-combine approach to make a data.frame that counts the total number of animals of each sex caught on each day in the surveys data.
+surveys %>% 
+  filter(!is.na(sex)) %>% 
+  mutate(date = paste(year, month, day, sep = "-") %>% ydm()) %>% 
+  group_by(date,sex) %>% 
+  summarise(total = n())
+
+#challenge 6 : Now use the data.frame you just made to plot the daily number of animals of each sex caught over time. 
+#It’s up to you what geom to use, but a line plot might be a good choice. You should also think about how to differentiate which data corresponds to which sex.
