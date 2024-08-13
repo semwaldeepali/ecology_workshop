@@ -1,7 +1,7 @@
 library(tidyverse)
 library(ratdat)
 
-#chack the type of comlete_old
+#check the type of comlete_old
 class(complete_old)
 
 #veiw structure of the data
@@ -105,7 +105,7 @@ fct_na_value_to_level(sex, "(Missing)")
 #convert factor int character vector
 as.character(sex)
 
-#beaware
+#Note
 int_factor = factor(c(1990,1991, 1992, 1992))
 int_factor
 #doing as as.numeric on integer factor will pull out levels and not actual factor year value
