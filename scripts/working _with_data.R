@@ -147,11 +147,55 @@ surveys %>%
          weight_diff = weight - mean_weight)
 
 #challenge 5 : Use the split-apply-combine approach to make a data.frame that counts the total number of animals of each sex caught on each day in the surveys data.
-surveys %>% 
+sex_date_count <- surveys %>% 
   filter(!is.na(sex)) %>% 
   mutate(date = paste(year, month, day, sep = "-") %>% ydm()) %>% 
+  filter(!is.na(date)) %>% 
   group_by(date,sex) %>% 
-  summarise(total = n())
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+sex_date_count
 
 #challenge 6 : Now use the data.frame you just made to plot the daily number of animals of each sex caught over time. 
 #It’s up to you what geom to use, but a line plot might be a good choice. You should also think about how to differentiate which data corresponds to which sex.
+
+time_series_plot <- 
+  sex_date_count %>% 
+  ggplot(aes(x = date, y = total, colour = sex)) +
+  geom_line(na.rm = T, linewidth = 1) +
+  labs(title = "Male-Female caught over the years.", x = "Date", y = "Animal Count", color = "Sex") +
+  theme_bw() +
+  scale_color_viridis_d()
+
+ggsave("images/male_female_caught_over_time.jpg",plot = time_series_plot, height = 6, width = 8)  
+
+#group_by() + summarize() combined reshapes the data frame into group as rows along with summarized statistics as column
+sp_by_plot <- surveys %>% 
+  filter(!is.na(weight)) %>% 
+  group_by(species_id, plot_id) %>% 
+  summarise(mean_weight = mean(weight)) %>% 
+  arrange(species_id, plot_id)
+sp_by_plot
+
+#to reshape data frame with species_id as row header and plot_id as column header with mean_weight as values : pivot_wider()
+sp_by_plot_wider <- sp_by_plot %>% 
+  pivot_wider(names_from = plot_id, values_from = mean_weight)
+sp_by_plot_wider
+#adding prefix to plot columns
+sp_by_plot_wider <- sp_by_plot %>% 
+  pivot_wider(names_from = plot_id, values_from = mean_weight, names_prefix = "plot_") %>% 
+sp_by_plot_wider
+
+#write to csv file
+write_csv(sp_by_plot_wider, "data/cleaned/surveys_meanweight_species_plot.csv")
+
+#pivot_longer() ggplot likes data in longer format
+sp_by_plot_longer <- sp_by_plot_wider %>% 
+  pivot_longer(cols = -species_id, names_to = "Plots", values_to = "mean_weight")
+sp_by_plot_longer
+
+#filter out NA values of mean_weight
+sp_by_plot_longer <- sp_by_plot_longer %>% 
+  filter(!is.na(mean_weight))
+sp_by_plot_longer
+
